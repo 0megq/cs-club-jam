@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3 uid="uid://wvp7kf6j0s7s"]
+
+[ext_resource type="Script" uid="uid://cy01d43mt2pkn" path="res://pixel_simulation.gd" id="1_22pjc"]
+
+[node name="PixelSimulation" type="Node2D"]
+script = ExtResource("1_22pjc")
+
+[node name="AfterSprite2D" type="Sprite2D" parent="."]
+position = Vector2(945.00006, 360)
+scale = Vector2(0.28613284, 0.28613284)
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(178, 362.00006)
+scale = Vector2(0.3046875, 0.3046875)
+
+[node name="R" type="HSlider" parent="."]
+offset_left = 491.0
+offset_top = 249.0
+offset_right = 592.0
+offset_bottom = 265.0
+max_value = 4.0
+step = 0.1
+value = 1.0
+
+[node name="G" type="HSlider" parent="."]
+offset_left = 491.0
+offset_top = 293.0
+offset_right = 592.0
+offset_bottom = 309.0
+max_value = 4.0
+step = 0.1
+value = 1.0
+
+[node name="B" type="HSlider" parent="."]
+offset_left = 491.0
+offset_top = 343.0
+offset_right = 592.0
+offset_bottom = 359.0
+max_value = 4.0
+step = 0.1
+value = 1.0
+
+[node name="Swap" type="Button" parent="."]
+offset_left = 502.0
+offset_top = 126.0
+offset_right = 552.0
+offset_bottom = 157.0
+text = "Swap"
+
+[connection signal="value_changed" from="R" to="." method="_on_r_value_changed"]
+[connection signal="value_changed" from="G" to="." method="_on_g_value_changed"]
+[connection signal="value_changed" from="B" to="." method="_on_b_value_changed"]
+[connection signal="pressed" from="Swap" to="." method="_on_swap_pressed"]

@@ -1,0 +1,134 @@
+extends Node2D
+
+
+var mult: Vector3 = Vector3(1, 1, 1)
+
+var rd: RenderingDevice
+var shader: RID
+var texture_a: RID
+var texture_b: RID
+var image_uniform_src: RDUniform
+var image_uniform_dst: RDUniform
+
+
+func _ready() -> void:
+	rd = RenderingServer.get_rendering_device()
+	_load_shader()
+	_create_textures()
+	_create_uniforms()
+
+
+func _load_shader() -> void:
+	# Load shader
+	var shader_file := load("res://compute_shader.glsl")	
+	# Compile shader
+	shader = rd.shader_create_from_spirv(shader_file.get_spirv())
+
+func _create_textures() -> void:
+	# source setup
+	var src_image := preload("res://test.png").get_image()
+	src_image.convert(Image.FORMAT_RGBAF)
+	
+	var texture_format := RDTextureFormat.new()
+	texture_format.width = 1024
+	texture_format.height = 1024
+	texture_format.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
+	
+	texture_format.usage_bits = (
+		RenderingDevice.TEXTURE_USAGE_STORAGE_BIT +
+		RenderingDevice.TEXTURE_USAGE_CAN_COPY_TO_BIT +
+		RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT
+	)
+	
+	# destination setup
+	var empty_image := Image.create(texture_format.width, texture_format.height, false, Image.FORMAT_RGBAF)
+	
+	# create textures
+	var texture_view := RDTextureView.new()
+	texture_a = rd.texture_create(texture_format, texture_view, [src_image.get_data()])
+	
+	texture_b = rd.texture_create(texture_format, texture_view, [empty_image.get_data()])
+	
+
+func _create_uniforms() -> void:	
+	# Create image uniform
+	image_uniform_src = RDUniform.new()
+	image_uniform_src.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
+	image_uniform_src.binding = 0
+	image_uniform_src.add_id(texture_a)
+	
+	# Create image uniform
+	image_uniform_dst = RDUniform.new()
+	image_uniform_dst.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
+	image_uniform_dst.binding = 1
+	image_uniform_dst.add_id(texture_b)
+	
+
+func run_compute() -> void:
+	# Create storage buffer for the multiplier
+	var mult_bytes := PackedFloat32Array([mult.x, mult.y, mult.z]).to_byte_array()
+	var mult_buf: RID = rd.storage_buffer_create(mult_bytes.size(), mult_bytes)
+	
+	# create the uniform
+	var mult_uniform := RDUniform.new()
+	mult_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
+	mult_uniform.binding = 2
+	mult_uniform.add_id(mult_buf)
+	
+	var pipeline := rd.compute_pipeline_create(shader)
+	var uniform_set := rd.uniform_set_create([mult_uniform, image_uniform_src, image_uniform_dst], shader, 0)
+	var compute_list := rd.compute_list_begin()
+	rd.compute_list_bind_compute_pipeline(compute_list, pipeline)
+	rd.compute_list_bind_uniform_set(compute_list, uniform_set, 0)
+	rd.compute_list_dispatch(compute_list, 32, 32, 1)
+	rd.compute_list_end()
+	
+	# Retrieval
+	var tex_rd := Texture2DRD.new()
+	tex_rd.texture_rd_rid = texture_b
+	$AfterSprite2D.texture = tex_rd
+	
+	# clean up
+	rd.free_rid(mult_buf)
+
+func clean_up() -> void:
+	rd.free_rid(shader)
+	rd.free_rid(texture_a)
+	rd.free_rid(texture_b)
+
+func _exit_tree() -> void:
+	clean_up()
+
+func _on_r_value_changed(value: float) -> void:
+	mult.x = value
+	run_compute()
+	
+
+func _on_g_value_changed(value: float) -> void:
+	mult.y = value
+	run_compute()
+	
+
+func _on_b_value_changed(value: float) -> void:
+	mult.z = value
+	run_compute()
+
+
+func _on_swap_pressed() -> void:
+	var tmp := texture_a
+	texture_a = texture_b
+	texture_b = tmp
+		
+	image_uniform_src.clear_ids()
+	image_uniform_src.add_id(texture_a)
+	image_uniform_dst.clear_ids()
+	image_uniform_dst.add_id(texture_b)
+	
+	var tex_rd := Texture2DRD.new()
+	tex_rd.texture_rd_rid = texture_a
+	$Sprite2D.texture = tex_rd
+	
+	tex_rd = Texture2DRD.new()
+	tex_rd.texture_rd_rid = texture_b
+	$AfterSprite2D.texture = tex_rd
+	

@@ -11,5 +11,16 @@ config_version=5
 [application]
 
 config/name="cs-club-jam"
+run/main_scene="uid://wvp7kf6j0s7s"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[global_group]
+
+scarecrow=""
+crow=""
+
+[layer_names]
+
+2d_physics/layer_1="Scarecrow"
+2d_physics/layer_2="Crow"
