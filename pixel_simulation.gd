@@ -13,6 +13,7 @@ var tex_rd: Texture2DRD
 var tex_rd2: Texture2DRD
 
 func _ready() -> void:
+	randomize()
 	rd = RenderingServer.get_rendering_device()
 	_load_shader()
 	_create_textures()
@@ -26,22 +27,43 @@ func _ready() -> void:
 	$Display.texture = tex_rd
 	$Display2.texture = tex_rd2
 	
+	$Timer.start()
+	$Timer.paused = true
+	
 
 func _load_shader() -> void:
 	# Load shader
-	var shader_file := load("res://compute_shader.glsl")	
+	var shader_file: RDShaderFile = load("res://compute_shader.glsl")	
 	# Compile shader
 	shader = rd.shader_create_from_spirv(shader_file.get_spirv())
 
 
+func _get_start_image() -> Image:
+	#var src_image := preload("res://test.png").get_image()
+	#src_image.convert(Image.FORMAT_RGBAF)
+	
+	var noise := FastNoiseLite.new()
+	noise.seed = randi()
+	noise.frequency = 0.3
+	var src_image := noise.get_seamless_image(256, 256)
+	src_image.convert(Image.FORMAT_RGBAF)
+	for x in 256:
+		for y in 256:
+			var col: Color = src_image.get_pixel(x, y)
+			if col.r > 0.5:
+				src_image.set_pixel(x, y, Color.WHITE)
+			else:
+				src_image.set_pixel(x, y, Color.BLACK)
+		
+	return src_image
+
 func _create_textures() -> void:
 	# source setup
-	var src_image := preload("res://test.png").get_image()
-	src_image.convert(Image.FORMAT_RGBAF)
+	var src_image := _get_start_image()
 	
 	var texture_format := RDTextureFormat.new()
-	texture_format.width = 64
-	texture_format.height = 64
+	texture_format.width = 256
+	texture_format.height = 256
 	texture_format.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
 	
 	texture_format.usage_bits = (
@@ -108,13 +130,6 @@ func swap_textures() -> void:
 	# Set the texture again
 	tex_rd.texture_rd_rid = texture_a
 	tex_rd2.texture_rd_rid = texture_b
-	
-
-func _on_step_pressed() -> void:
-	run_compute()
-
-func _on_swap_pressed() -> void:
-	swap_textures()
 
 
 func clean_up() -> void:
@@ -128,4 +143,17 @@ func _exit_tree() -> void:
 
 func _on_timer_timeout() -> void:
 	run_compute()
+	swap_textures()
+
+
+func _on_start_pressed() -> void:
+	$Timer.paused = !$Timer.paused
+
+
+func _on_step_pressed() -> void:
+	run_compute()
+	swap_textures()
+
+
+func _on_swap_pressed() -> void:
 	swap_textures()

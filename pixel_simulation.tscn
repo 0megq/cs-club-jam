@@ -1,36 +1,61 @@
-[gd_scene load_steps=2 format=3 uid="uid://wvp7kf6j0s7s"]
+[gd_scene load_steps=5 format=3 uid="uid://wvp7kf6j0s7s"]
 
 [ext_resource type="Script" uid="uid://cy01d43mt2pkn" path="res://pixel_simulation.gd" id="1_22pjc"]
+
+[sub_resource type="Gradient" id="Gradient_22pjc"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.55333334)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ao14k"]
+noise_type = 2
+frequency = 0.4833
+offset = Vector3(36.36, 0, 0)
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_56th7"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_ao14k")
+color_ramp = SubResource("Gradient_22pjc")
+seamless = true
 
 [node name="PixelSimulation" type="Node2D"]
 script = ExtResource("1_22pjc")
 
 [node name="Display" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(178, 362.00006)
+position = Vector2(569, 303)
 scale = Vector2(2, 2)
+texture = SubResource("NoiseTexture2D_56th7")
 
 [node name="Display2" type="Sprite2D" parent="."]
+visible = false
 texture_filter = 1
-position = Vector2(778, 351)
+position = Vector2(907, 337)
 scale = Vector2(2, 2)
 
-[node name="Step" type="Button" parent="."]
-offset_left = 528.0
-offset_top = 185.0
-offset_right = 571.0
-offset_bottom = 216.0
-text = "Step"
-
 [node name="Swap" type="Button" parent="."]
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = 1038.0
+offset_top = -1.0
+offset_right = 1088.0
+offset_bottom = 30.0
 text = "Swap"
 
-[node name="Timer" type="Timer" parent="."]
-wait_time = 0.5
-autostart = true
+[node name="Step" type="Button" parent="."]
+offset_left = 560.0
+offset_top = 3.0
+offset_right = 603.0
+offset_bottom = 34.0
+text = "Step"
 
-[connection signal="pressed" from="Step" to="." method="_on_step_pressed"]
+[node name="Start" type="Button" parent="."]
+offset_right = 8.0
+offset_bottom = 8.0
+text = "Start/Stop"
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 0.1
+
 [connection signal="pressed" from="Swap" to="." method="_on_swap_pressed"]
+[connection signal="pressed" from="Step" to="." method="_on_step_pressed"]
+[connection signal="pressed" from="Start" to="." method="_on_start_pressed"]
 [connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

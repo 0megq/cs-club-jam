@@ -15,6 +15,10 @@ run/main_scene="uid://wvp7kf6j0s7s"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
+[display]
+
+window/stretch/mode="canvas_items"
+
 [global_group]
 
 scarecrow=""
