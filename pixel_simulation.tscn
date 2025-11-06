@@ -23,7 +23,7 @@ script = ExtResource("1_22pjc")
 
 [node name="Display" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(569, 303)
+position = Vector2(582, 321)
 scale = Vector2(2, 2)
 texture = SubResource("NoiseTexture2D_56th7")
 

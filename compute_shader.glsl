@@ -7,6 +7,12 @@ const vec4 deadColor = vec4(0.0, 0.0, 0.0, 1.0);
 
 layout(set = 0, binding = 0, rgba32f) uniform readonly image2D imageSrc;
 layout(set = 0, binding = 1, rgba32f) uniform writeonly image2D imageDst;
+layout(set = 0, binding = 2, std430) buffer MouseInput {
+	int x;
+	int y;
+	int pressed;
+}
+mouseInput;
 
 // Threads per work group
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -35,13 +41,18 @@ int getLiveNeighbours(int x, int y) {
 void main() {
 	ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
 
-	int liveNeighbours = getLiveNeighbours(pos.x, pos.y);
+	// int liveNeighbours = getLiveNeighbours(pos.x, pos.y);
 	bool isAlive = isCellAlive(pos.x, pos.y);
 	bool nextState = isAlive;
-	if(isAlive && (liveNeighbours < 2 || liveNeighbours > 3)){
-		nextState = false;
-	} else if(!isAlive && liveNeighbours == 3){
+	// if(isAlive && (liveNeighbours < 2 || liveNeighbours > 3)){
+	// 	nextState = false;
+	// } else if(!isAlive && liveNeighbours == 3){
+	// 	nextState = true;
+	// }
+
+	if(mouseInput.pressed != 0 && pos.x == mouseInput.x && pos.y == mouseInput.y) {
 		nextState = true;
+		mouseInput.pressed = 0;
 	}
 	
 	vec4 newColor = nextState ? aliveColor : deadColor;
