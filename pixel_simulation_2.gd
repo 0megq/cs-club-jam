@@ -37,30 +37,50 @@ func _get_mouse_pixel_pos() -> Vector2i:
 func in_sim(v: Vector2i) -> bool:
 	return v.x >= 0 and v.y >= 0 and v.x < size.x and v.y < size.y
 
+
+func swap_pixels(a: Vector2i, b: Vector2i, img: Image) -> void:
+	var col_a := img.get_pixelv(a)
+	var col_b := img.get_pixelv(b)
+	img.set_pixelv(a, col_b)
+	img.set_pixelv(b, col_a)
+
 func step_simulation() -> void:
-	var image_out := image.duplicate()
+	var img_out := image.duplicate()
 	for x in size.x:
 		for y in size.y:
-			var color := image.get_pixel(x, y)
+			var current := Vector2i(x, y)
+			var color := image.get_pixelv(current)
 			if color == empty:
 				continue
-			
-			var below: Vector2i = Vector2i(x, y + 1)
-			var left: Vector2i = Vector2i(x - 1, y + 1)
-			var right: Vector2i = Vector2i(x + 1, y + 1)
-			if color == water:
-				left.y -= 1
-				right.y -= 1
-			if in_sim(below) and image.get_pixelv(below) == empty and image_out.get_pixelv(below) == empty:
-				image_out.set_pixelv(below, color)
-				image_out.set_pixel(x,y, empty)
-			elif in_sim(right) and image.get_pixelv(right) == empty and image_out.get_pixelv(right) == empty:
-				image_out.set_pixelv(right, color)
-				image_out.set_pixel(x,y, empty)
-			elif in_sim(left) and image.get_pixelv(left) == empty and image_out.get_pixelv(left) == empty:
-				image_out.set_pixelv(left, color)
-				image_out.set_pixel(x,y, empty)
-	image = image_out
+				
+			var down: Vector2i = current + Vector2i.DOWN
+			var left: Vector2i = current + Vector2i.LEFT
+			var right: Vector2i = current + Vector2i.RIGHT
+			var left_down: Vector2i = current + Vector2i.LEFT + Vector2i.DOWN
+			var right_down: Vector2i = current + Vector2i.RIGHT + Vector2i.DOWN
+			if color == sand:
+				var arr: Array[Vector2i] = [down]
+				var lr := [left_down, right_down]
+				lr.shuffle()
+				arr.append_array(lr)
+				for v in arr:
+					if in_sim(v) and image.get_pixelv(v) in [empty, water]:
+						swap_pixels(current, v, img_out)
+						break
+			elif color == water:
+				var arr: Array[Vector2i] = [down]
+				var lr := [left_down, right_down]
+				lr.shuffle()
+				arr.append_array(lr)
+				lr = [left, right]
+				lr.shuffle()
+				arr.append_array(lr)
+				for v in arr:
+					if in_sim(v) and image.get_pixelv(v) in [empty]:
+						swap_pixels(current, v, img_out)
+						break
+						
+	image = img_out
 	texture.update(image)
 				
 
