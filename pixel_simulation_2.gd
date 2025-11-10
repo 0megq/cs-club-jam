@@ -1,6 +1,6 @@
-extends Sprite2D
+class_name PixelSimulation extends Sprite2D
 
-const size: Vector2i = Vector2i(288, 162)
+const size: Vector2i = Vector2i(288, 164)
 const empty := Color.TRANSPARENT
 const dirt := Color.SADDLE_BROWN
 const water := Color.SKY_BLUE
@@ -30,15 +30,23 @@ func _physics_process(_delta: float) -> void:
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		var mouse_pos := _get_mouse_pixel_pos()
 		if (in_sim(mouse_pos)):
-			image.set_pixelv(mouse_pos, dirt)
-			set_pixel_update(mouse_pos, true)
-			texture.update(image)
+			spawn_pixel(mouse_pos, dirt)
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		var mouse_pos := _get_mouse_pixel_pos()
 		if (in_sim(mouse_pos)):
-			image.set_pixelv(mouse_pos, water)
-			set_pixel_update(mouse_pos, true)
-			texture.update(image)
+			spawn_pixel(mouse_pos, water)
+	pass
+
+
+func spawn_pixel(pos: Vector2i, color: Color, update := true) -> void:
+	image.set_pixelv(pos, color)
+	set_pixel_update(pos, update)
+	texture.update(image)
+
+
+func global_to_pixel(global: Vector2) -> Vector2i:
+	return Vector2i(to_local(global) + Vector2(size) / 2)
+
 
 func _get_mouse_pixel_pos() -> Vector2i:
 	# get mouse pos relative to top left corner
