@@ -1,24 +1,32 @@
+@tool
 class_name PixelSimulation extends Sprite2D
 
-const size: Vector2i = Vector2i(288, 164)
+const size: Vector2i = Vector2i(240, 180)
 const empty := Color.TRANSPARENT
-const dirt := Color.SADDLE_BROWN
+const dirt := Color.SIENNA
 const water := Color.SKY_BLUE
+const seed := Color.GREEN_YELLOW
 
+@export_tool_button("Run Setup") var setup: Callable = setup_image
 @export var step_interval: float
 
 var image: Image
 var update_grid: Array[bool]
+var velocity_grid: Array[Vector2i]
 
-
-func _ready() -> void:
+func setup_image() -> void:
 	# create the image texture
 	image = Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBAF)
 	image.fill(empty)
 	var rect := Rect2i(0, size.y * 0.7, size.x, size.y * 0.3)
 	image.fill_rect(rect, dirt)
 	texture = ImageTexture.create_from_image(image)
-	position = get_viewport_rect().get_center()
+	position = Vector2(120, 90)
+
+
+func _ready() -> void:
+	# create the image texture
+	setup_image()
 	
 	update_grid.resize(size.x * size.y)
 	update_grid.fill(false)
@@ -27,21 +35,24 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		var mouse_pos := _get_mouse_pixel_pos()
-		if (in_sim(mouse_pos)):
-			spawn_pixel(mouse_pos, dirt)
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		var mouse_pos := _get_mouse_pixel_pos()
-		if (in_sim(mouse_pos)):
-			spawn_pixel(mouse_pos, water)
+	#if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		#var mouse_pos := _get_mouse_pixel_pos()
+		#if (in_sim(mouse_pos)):
+			#spawn_pixel(mouse_pos, dirt)
+	#if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		#var mouse_pos := _get_mouse_pixel_pos()
+		#if (in_sim(mouse_pos)):
+			#spawn_pixel(mouse_pos, water)
 	pass
 
 
-func spawn_pixel(pos: Vector2i, color: Color, update := true) -> void:
+# returns false if pixel is out of bounds
+func spawn_pixel(pos: Vector2i, color: Color, update := true) -> bool:
+	if !in_sim(pos): return false
 	image.set_pixelv(pos, color)
 	set_pixel_update(pos, update)
 	texture.update(image)
+	return true
 
 
 func global_to_pixel(global: Vector2) -> Vector2i:

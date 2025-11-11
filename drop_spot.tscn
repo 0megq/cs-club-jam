@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3 uid="uid://bf11fnkjlhj5f"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_eow3j"]
+radius = 9.055386
+
+[node name="DropSpot" type="Area2D"]
+visible = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_eow3j")
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -8.0
+offset_top = -4.0
+offset_right = 45.0
+offset_bottom = 19.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.3, 0.3)
+size_flags_horizontal = 4
+text = "Return"
