@@ -5,23 +5,24 @@ const size: Vector2i = Vector2i(240, 180)
 const empty := Color.TRANSPARENT
 const dirt := Color.SIENNA
 const water := Color.SKY_BLUE
-const seed := Color.GREEN_YELLOW
+const pumpkin_seed := Color.GREEN_YELLOW
+const gravity: float = .1
+const step_interval: float = 0.01
 
 @export_tool_button("Run Setup") var setup: Callable = setup_image
-@export var step_interval: float
 
 var image: Image
 var update_grid: Array[bool]
-var velocity_grid: Array[Vector2i]
+var velocity_grid: Array[Vector2]
 
 func setup_image() -> void:
 	# create the image texture
 	image = Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBAF)
 	image.fill(empty)
-	var rect := Rect2i(0, size.y * 0.7, size.x, size.y * 0.3)
+	var rect := Rect2i(0, size.y * 0.7, size.x, size.y * 0.3 + 1)
 	image.fill_rect(rect, dirt)
 	texture = ImageTexture.create_from_image(image)
-	position = Vector2(120, 90)
+	position = size / 2
 
 
 func _ready() -> void:
@@ -30,6 +31,9 @@ func _ready() -> void:
 	
 	update_grid.resize(size.x * size.y)
 	update_grid.fill(false)
+	
+	velocity_grid.resize(size.x * size.y)
+	velocity_grid.fill(Vector2.ZERO)
 	
 	$Step.start(step_interval)
 
@@ -47,10 +51,11 @@ func _physics_process(_delta: float) -> void:
 
 
 # returns false if pixel is out of bounds
-func spawn_pixel(pos: Vector2i, color: Color, update := true) -> bool:
+func spawn_pixel(pos: Vector2i, color: Color, update := true, velocity := Vector2.DOWN) -> bool:
 	if !in_sim(pos): return false
 	image.set_pixelv(pos, color)
 	set_pixel_update(pos, update)
+	set_velocity(pos, velocity)
 	texture.update(image)
 	return true
 
@@ -65,6 +70,12 @@ func _get_mouse_pixel_pos() -> Vector2i:
 	#mouse_pos = mouse_pos.clamp(Vector2i.ZERO, size - Vector2i.ONE)
 	return mouse_pos
 
+
+func get_velocity(v: Vector2i) -> Vector2:
+	return velocity_grid[v.x + v.y * size.x]
+	
+func set_velocity(v: Vector2i, vel: Vector2) -> void:
+	velocity_grid[v.x + v.y * size.x] = vel
 
 func set_pixel_update(v: Vector2i, update: bool) -> void:
 	update_grid[v.x + v.y * size.x] = update
@@ -84,6 +95,13 @@ func swap_pixels(a: Vector2i, b: Vector2i) -> void:
 	image.set_pixelv(b, col_a)
 	set_pixel_update(a, true)
 	set_pixel_update(b, true)
+	
+	# swap veloicty
+	var vel_a := get_velocity(a)
+	var vel_b := get_velocity(b)
+	set_velocity(a, vel_b)
+	set_velocity(b, vel_a)
+	
 	for nei in get_neighbors(a):
 		if in_sim(nei):
 			set_pixel_update(nei, true)
@@ -136,10 +154,28 @@ func step_simulation() -> void:
 					if in_sim(v) and image.get_pixelv(v) in [empty]:
 						swap_pixels(current, v)
 						break
+			elif color == pumpkin_seed:
+				# get position before collision
+				var cur_vel := get_velocity(current)
+				var new_pos := current
+				for j in range(1, round(cur_vel.y) + 1):
+					var temp := current + Vector2i(0,j)
+					if in_sim(temp) and image.get_pixelv(temp) in [empty, water]:
+						new_pos = temp
+					else:
+						break
+
+				if current != new_pos:
+					swap_pixels(current, new_pos)
+				else:
+					cur_vel.y = 0
+				# update velocity		
+				cur_vel.y += gravity
+				set_velocity(new_pos, cur_vel)
+				
 						
 	#image = img_out
 	texture.update(image)
-				
 
 func _on_step_timeout() -> void:
 	step_simulation()

@@ -28,7 +28,7 @@ func _process(delta: float) -> void:
 				var should_drop := holding_acceleration.length_squared() > drop_acc_sq and tilted
 				if should_drop:
 					var pixel := sim.global_to_pixel(get_global_mouse_position())
-					sim.spawn_pixel(pixel, sim.seed)
+					sim.spawn_pixel(pixel, sim.pumpkin_seed)
 			watering_can:
 				var should_drop := holding_acceleration.length_squared() > drop_acc_sq and tilted
 				if should_drop:
