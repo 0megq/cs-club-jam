@@ -14,6 +14,13 @@ var tilted: bool = false
 @onready var seeds: Area2D = $Seeds
 @onready var watering_can: Area2D = $WateringCan
 
+
+func _ready() -> void:
+	$SeedDropSpot.hide()
+	$CanDropSpot.hide()
+	$CanFillSpot.hide()
+
+
 func _process(delta: float) -> void:
 	if holding:
 		var old_pos := holding.global_position
