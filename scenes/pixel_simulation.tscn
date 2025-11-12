@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://wvp7kf6j0s7s"]
 
-[ext_resource type="Script" uid="uid://cy01d43mt2pkn" path="res://pixel_simulation.gd" id="1_22pjc"]
+[ext_resource type="Script" uid="uid://cy01d43mt2pkn" path="res://scripts/pixel_simulation.gd" id="1_22pjc"]
 
 [sub_resource type="Gradient" id="Gradient_22pjc"]
 interpolation_mode = 1

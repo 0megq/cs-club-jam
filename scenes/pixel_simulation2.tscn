@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://chhvueb644dpr"]
 
-[ext_resource type="Script" uid="uid://0ndne3h7waqe" path="res://pixel_simulation_2.gd" id="1_5wn1n"]
+[ext_resource type="Script" uid="uid://0ndne3h7waqe" path="res://scripts/pixel_simulation_2.gd" id="1_5wn1n"]
 
 [node name="PixelSimulation2" type="Sprite2D"]
 texture_filter = 1

@@ -37,16 +37,30 @@ func _process(delta: float) -> void:
 		
 		if cursor.overlaps_area(holding_drop_spot):
 			holding_drop_spot.scale = Vector2(1.5, 1.5)
+		elif holding == watering_can and cursor.overlaps_area($CanFillSpot):
+			$CanFillSpot.scale = Vector2(1.5, 1.5)
 		else:
+			if holding == watering_can:
+				$CanFillSpot.scale = Vector2.ONE
 			holding_drop_spot.scale = Vector2.ONE
 			
 		
 		if Input.is_action_just_pressed("click"):
 			if cursor.overlaps_area(holding_drop_spot):
 				holding_drop_spot.hide()
+				if holding == watering_can:
+					$CanFillSpot.hide()
+					$WateringCan/Fill.modulate.a = 1
 				tilted = false
 				holding.rotation_degrees = 0
 				holding.position = holding_drop_spot.position
+				holding = null
+			elif holding == watering_can and cursor.overlaps_area($CanFillSpot):
+				holding_drop_spot.hide()
+				$CanFillSpot.hide()
+				tilted = false
+				holding.rotation_degrees = 0
+				holding.position = $CanFillSpot.position
 				holding = null
 			else:
 				tilted = !tilted
@@ -54,21 +68,26 @@ func _process(delta: float) -> void:
 				
 	else:
 		# try to interact with something
-		
-
 		if Input.is_action_just_pressed("click"):
 			if cursor.overlaps_area(spigot):
 				spigot_on = !spigot_on
 			elif cursor.overlaps_area(seeds):
 				holding = seeds
 				holding_drop_spot = $SeedDropSpot
+				holding_drop_spot.show()
 			elif cursor.overlaps_area(watering_can):
 				holding = watering_can
 				holding_drop_spot = $CanDropSpot
-				
-			if holding:
 				holding_drop_spot.show()
+				$CanFillSpot.show()
+				$WateringCan/Fill.modulate.a = 0.5
 				
+		if cursor.overlaps_area(watering_can):
+			$WateringCan/Fill.modulate.a = 0.5
+		else:
+			$WateringCan/Fill.modulate.a = 1
+	
+					
 	
 	if spigot_on:
 		var pixel := sim.global_to_pixel($Spigot/Spawn.global_position)

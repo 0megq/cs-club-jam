@@ -1,12 +1,12 @@
-[gd_scene load_steps=14 format=3 uid="uid://droy423jhyuag"]
+[gd_scene load_steps=15 format=3 uid="uid://droy423jhyuag"]
 
-[ext_resource type="PackedScene" uid="uid://chhvueb644dpr" path="res://pixel_simulation2.tscn" id="1_80nbo"]
-[ext_resource type="Script" uid="uid://coj50a4u1mptx" path="res://game.gd" id="1_fc0e3"]
-[ext_resource type="Texture2D" uid="uid://bp60q0a7id0g8" path="res://spigot.png" id="2_feb5d"]
-[ext_resource type="Texture2D" uid="uid://cnghiemy64m50" path="res://watering-can.png" id="3_fc0e3"]
-[ext_resource type="Texture2D" uid="uid://cnunvvrcm7uur" path="res://table.png" id="4_ryrav"]
-[ext_resource type="Texture2D" uid="uid://cx4rg7pgjwq0o" path="res://pumpkin-seeds.png" id="5_7jktm"]
-[ext_resource type="PackedScene" uid="uid://bf11fnkjlhj5f" path="res://drop_spot.tscn" id="6_eow3j"]
+[ext_resource type="Script" uid="uid://coj50a4u1mptx" path="res://scripts/game.gd" id="1_fc0e3"]
+[ext_resource type="PackedScene" uid="uid://chhvueb644dpr" path="res://scenes/pixel_simulation2.tscn" id="2_eow3j"]
+[ext_resource type="Texture2D" uid="uid://bp60q0a7id0g8" path="res://art/spigot.png" id="2_feb5d"]
+[ext_resource type="Texture2D" uid="uid://cnghiemy64m50" path="res://art/watering-can.png" id="3_fc0e3"]
+[ext_resource type="Texture2D" uid="uid://cnunvvrcm7uur" path="res://art/table.png" id="4_ryrav"]
+[ext_resource type="Texture2D" uid="uid://cx4rg7pgjwq0o" path="res://art/pumpkin-seeds.png" id="5_7jktm"]
+[ext_resource type="PackedScene" uid="uid://bf11fnkjlhj5f" path="res://scenes/drop_spot.tscn" id="6_j5wjh"]
 
 [sub_resource type="Image" id="Image_eow3j"]
 data = {
@@ -32,19 +32,23 @@ radius = 0.01
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ryrav"]
 size = Vector2(8, 9)
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_eow3j"]
+radius = 9.055386
+
 [node name="Game" type="Node2D"]
 script = ExtResource("1_fc0e3")
 
-[node name="PixelSimulation2" parent="." instance=ExtResource("1_80nbo")]
+[node name="PixelSimulation2" parent="." instance=ExtResource("2_eow3j")]
 position = Vector2(120, 90)
 texture = SubResource("ImageTexture_j5wjh")
 
 [node name="Spigot" type="Area2D" parent="."]
-position = Vector2(0, 101)
+position = Vector2(5, 101)
 
 [node name="Spigot" type="Sprite2D" parent="Spigot"]
+position = Vector2(-2, 0)
 texture = ExtResource("2_feb5d")
-offset = Vector2(4.5, 3)
+offset = Vector2(4, 3)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Spigot"]
 position = Vector2(4.5, 3)
@@ -56,10 +60,19 @@ position = Vector2(6, 5)
 [node name="WateringCan" type="Area2D" parent="."]
 position = Vector2(226, 96)
 
-[node name="Sprite2D" type="Sprite2D" parent="WateringCan"]
+[node name="Fill" type="Sprite2D" parent="WateringCan"]
 texture = ExtResource("3_fc0e3")
 offset = Vector2(0, 0.5)
 flip_h = true
+region_enabled = true
+region_rect = Rect2(14, 0, 14, 13)
+
+[node name="Outline" type="Sprite2D" parent="WateringCan"]
+texture = ExtResource("3_fc0e3")
+offset = Vector2(0, 0.5)
+flip_h = true
+region_enabled = true
+region_rect = Rect2(0, 0, 14, 13)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WateringCan"]
 position = Vector2(0, 0.5)
@@ -80,11 +93,34 @@ texture = ExtResource("5_7jktm")
 position = Vector2(0, 0.5)
 shape = SubResource("RectangleShape2D_ryrav")
 
-[node name="SeedDropSpot" parent="." instance=ExtResource("6_eow3j")]
+[node name="SeedDropSpot" parent="." instance=ExtResource("6_j5wjh")]
 position = Vector2(204, 98)
 
-[node name="CanDropSpot" parent="." instance=ExtResource("6_eow3j")]
+[node name="CanDropSpot" parent="." instance=ExtResource("6_j5wjh")]
 position = Vector2(226, 96)
+
+[node name="CanFillSpot" type="Area2D" parent="."]
+position = Vector2(11, 114)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CanFillSpot"]
+shape = SubResource("CircleShape2D_eow3j")
+
+[node name="Label" type="Label" parent="CanFillSpot"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -8.0
+offset_top = -4.0
+offset_right = 45.0
+offset_bottom = 19.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.3, 0.3)
+size_flags_horizontal = 4
+text = "Fill"
+horizontal_alignment = 1
 
 [node name="Table" type="Sprite2D" parent="."]
 position = Vector2(216, 101)

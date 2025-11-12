@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cnghiemy64m50"
-path="res://.godot/imported/watering-can.png-880cee73429d97df6bb7ed4cb29c0711.ctex"
+uid="uid://cx4rg7pgjwq0o"
+path="res://.godot/imported/pumpkin-seeds.png-bf4a05e7edaac503ebdc2ce5c33bc85e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://watering-can.png"
-dest_files=["res://.godot/imported/watering-can.png-880cee73429d97df6bb7ed4cb29c0711.ctex"]
+source_file="res://art/pumpkin-seeds.png"
+dest_files=["res://.godot/imported/pumpkin-seeds.png-bf4a05e7edaac503ebdc2ce5c33bc85e.ctex"]
 
 [params]
 
