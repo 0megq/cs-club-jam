@@ -21,6 +21,20 @@ func setup_image() -> void:
 	image.fill(empty)
 	var rect := Rect2i(0, size.y * 0.7, size.x, size.y * 0.3 + 1)
 	image.fill_rect(rect, dirt)
+	var surface := size.y * 0.7
+	for x in 30:
+		var height = 30 - x
+		image.fill_rect(Rect2i(x - 1, surface, 1, height), empty)
+	
+	#var loaded_image := preload("res://art/map.png").get_image()
+	#image = Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBAF)
+	#for x in loaded_image.get_width():
+		#for y in loaded_image.get_height():
+			#var col := loaded_image.get_pixel(x,y)
+			#if col.a > 0:
+				#image.set_pixel(x,y,col)
+			#else:
+				#image.set_pixel(x,y,empty)
 	texture = ImageTexture.create_from_image(image)
 	position = size / 2
 
@@ -28,7 +42,6 @@ func setup_image() -> void:
 func _ready() -> void:
 	# create the image texture
 	setup_image()
-	
 	update_grid.resize(size.x * size.y)
 	update_grid.fill(false)
 	

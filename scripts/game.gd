@@ -1,18 +1,22 @@
 extends Node2D
 
 const drop_acc_sq: float = 10000 ** 2
+const watering_can_max_water: float = 50
 
 var spigot_on: bool = false
 var holding: Area2D = null
 var holding_velocity: Vector2
 var holding_drop_spot: Area2D = null
 var tilted: bool = false
+var watering_can_water_stored: float = 0
+var can_in_fill_spot: bool = false
 
 @onready var sim: PixelSimulation = $PixelSimulation2
 @onready var cursor: Area2D = $Cursor
 @onready var spigot: Area2D = $Spigot
 @onready var seeds: Area2D = $Seeds
 @onready var watering_can: Area2D = $WateringCan
+@onready var watering_can_spout: Marker2D = $WateringCan/Spout
 
 
 func _ready() -> void:
@@ -37,10 +41,24 @@ func _process(delta: float) -> void:
 					var pixel := sim.global_to_pixel(get_global_mouse_position())
 					sim.spawn_pixel(pixel, sim.pumpkin_seed)
 			watering_can:
-				var should_drop := holding_acceleration.length_squared() > drop_acc_sq and tilted
+				var should_drop := tilted and watering_can_water_stored >= 1
 				if should_drop:
-					var pixel := sim.global_to_pixel(get_global_mouse_position())
-					sim.spawn_pixel(pixel, sim.dirt)
+					var pixel := sim.global_to_pixel(watering_can_spout.global_position)
+					
+					const levels: int = 5
+					const water_per_level: float = 50.0 / levels
+					for lvl in range(levels, 0, -1):
+						if watering_can_water_stored <= water_per_level * lvl:
+							var pxl_to_check := pixel + (levels - lvl) * Vector2i.DOWN
+							should_drop = should_drop and sim.image.get_pixelv(pxl_to_check) == sim.empty
+							if !should_drop:
+								break
+						else:
+							break
+					
+					if should_drop:
+						sim.spawn_pixel(pixel, sim.water)
+						watering_can_water_stored -= 1
 		
 		if cursor.overlaps_area(holding_drop_spot):
 			holding_drop_spot.scale = Vector2(1.5, 1.5)
@@ -69,6 +87,7 @@ func _process(delta: float) -> void:
 				holding.rotation_degrees = 0
 				holding.position = $CanFillSpot.position
 				holding = null
+				can_in_fill_spot = true
 			else:
 				tilted = !tilted
 				holding.rotation_degrees = -45 if tilted else 0
@@ -88,13 +107,17 @@ func _process(delta: float) -> void:
 				holding_drop_spot.show()
 				$CanFillSpot.show()
 				$WateringCan/Fill.modulate.a = 0.5
+				can_in_fill_spot = false
 				
 		if cursor.overlaps_area(watering_can):
 			$WateringCan/Fill.modulate.a = 0.5
 		else:
 			$WateringCan/Fill.modulate.a = 1
-	
-					
+			
+		var can_px_pos := sim.global_to_pixel(watering_can.global_position)
+		if can_in_fill_spot and sim.image.get_pixelv(can_px_pos) == sim.water and watering_can_water_stored < watering_can_max_water:
+			sim.image.set_pixelv(can_px_pos, sim.empty)
+			watering_can_water_stored += 0.5
 	
 	if spigot_on:
 		var pixel := sim.global_to_pixel($Spigot/Spawn.global_position)
