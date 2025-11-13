@@ -3,7 +3,8 @@ class_name PixelSimulation extends Sprite2D
 
 const size: Vector2i = Vector2i(240, 180)
 const empty := Color.TRANSPARENT
-const dirt := Colors.colors[3]
+const wet_dirt := Colors.colors[5-3]
+const dirt := Colors.colors[6-3]
 const water := Colors.colors[21-3]
 const pumpkin_seed := Colors.colors[11-3]
 const gravity: float = .1
@@ -164,9 +165,14 @@ func step_simulation() -> void:
 				lr.shuffle()
 				arr.append_array(lr)
 				for v in arr:
-					if in_sim(v) and image.get_pixelv(v) in [empty]:
+					if !in_sim(v): continue
+					if image.get_pixelv(v) in [empty]:
 						swap_pixels(current, v)
 						break
+					elif image.get_pixelv(v) in [dirt]:
+						image.set_pixelv(current, empty)
+						image.set_pixelv(v, wet_dirt)
+						set_pixel_update(v, true)
 			elif color == pumpkin_seed:
 				# get position before collision
 				var cur_vel := get_velocity(current)
@@ -185,6 +191,26 @@ func step_simulation() -> void:
 				# update velocity		
 				cur_vel.y += gravity
 				set_velocity(new_pos, cur_vel)
+			elif color == wet_dirt:
+				var arr: Array[Vector2i] = [down]
+				var lr := [left_down, right_down]
+				lr.shuffle()
+				arr.append_array(lr)
+				#var placed := false
+				for v in arr:
+					if !in_sim(v): continue
+					if image.get_pixelv(v) in [empty, water]:
+						swap_pixels(current, v)
+						#placed = true
+						break
+				#if !placed:
+					#for v in arr:
+						#if !in_sim(v): continue
+						#if image.get_pixelv(v) in [dirt]:
+							#swap_pixels(current, v)
+							#break
+					
+								
 				
 						
 	#image = img_out
