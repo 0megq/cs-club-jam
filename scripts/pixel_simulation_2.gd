@@ -3,9 +3,9 @@ class_name PixelSimulation extends Sprite2D
 
 const size: Vector2i = Vector2i(240, 180)
 const empty := Color.TRANSPARENT
-const dirt := Color.SIENNA
-const water := Color.SKY_BLUE
-const pumpkin_seed := Color.GREEN_YELLOW
+const dirt := Colors.colors[3]
+const water := Colors.colors[21-3]
+const pumpkin_seed := Colors.colors[11-3]
 const gravity: float = .1
 const step_interval: float = 0.01
 
