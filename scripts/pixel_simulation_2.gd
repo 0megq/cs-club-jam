@@ -74,6 +74,10 @@ func spawn_pixel(pos: Vector2i, color: Color, update := true, velocity := Vector
 	return true
 
 
+func is_pixel_empty(v: Vector2i) -> bool:
+	return image.get_pixelv(v) == empty
+
+
 func global_to_pixel(global: Vector2) -> Vector2i:
 	return Vector2i(to_local(global) + Vector2(size) / 2)
 
@@ -116,10 +120,12 @@ func swap_pixels(a: Vector2i, b: Vector2i) -> void:
 	set_velocity(a, vel_b)
 	set_velocity(b, vel_a)
 	
-	for nei in get_neighbors(a):
-		if in_sim(nei):
-			set_pixel_update(nei, true)
-	for nei in get_neighbors(b):
+	update_neighbors(a)
+	update_neighbors(b)
+
+
+func update_neighbors(v: Vector2i) -> void:
+	for nei in get_neighbors(v):
 		if in_sim(nei):
 			set_pixel_update(nei, true)
 		
@@ -161,18 +167,42 @@ func step_simulation() -> void:
 				var lr := [left_down, right_down]
 				lr.shuffle()
 				arr.append_array(lr)
-				lr = [right, left]
-				lr.shuffle()
-				arr.append_array(lr)
+				var placed := false
 				for v in arr:
 					if !in_sim(v): continue
 					if image.get_pixelv(v) in [empty]:
 						swap_pixels(current, v)
+						placed = true
 						break
-					elif image.get_pixelv(v) in [dirt]:
-						image.set_pixelv(current, empty)
-						image.set_pixelv(v, wet_dirt)
-						set_pixel_update(v, true)
+				if !placed:
+					for v in arr:
+						if !in_sim(v): continue
+						if image.get_pixelv(v) in [dirt]:
+							image.set_pixelv(current, empty)
+							image.set_pixelv(v, wet_dirt)
+							set_pixel_update(v, true)
+							placed = true
+							break
+				if !placed:
+					arr = [right, left]
+					arr.shuffle()
+					for v in arr:
+						if !in_sim(v): continue
+						if image.get_pixelv(v) in [empty]:
+							swap_pixels(current, v)
+							placed = true
+							break
+				if !placed:
+					for v in arr:
+						if !in_sim(v): continue
+						if image.get_pixelv(v) in [dirt]:
+							image.set_pixelv(current, empty)
+							image.set_pixelv(v, wet_dirt)
+							set_pixel_update(v, true)
+							update_neighbors(v)
+							placed = true
+							break
+				
 			elif color == pumpkin_seed:
 				# get position before collision
 				var cur_vel := get_velocity(current)
@@ -195,26 +225,41 @@ func step_simulation() -> void:
 				var arr: Array[Vector2i] = [down]
 				var lr := [left_down, right_down]
 				lr.shuffle()
+				lr.shuffle()
+				lr.shuffle()
 				arr.append_array(lr)
-				#var placed := false
+				var placed := false
 				for v in arr:
 					if !in_sim(v): continue
 					if image.get_pixelv(v) in [empty, water]:
 						swap_pixels(current, v)
-						#placed = true
+						placed = true
 						break
-				#if !placed:
-					#for v in arr:
-						#if !in_sim(v): continue
-						#if image.get_pixelv(v) in [dirt]:
-							#swap_pixels(current, v)
-							#break
-					
+				if !placed:
+					var distance := how_many_pixels_above(current, wet_dirt)
+					var weight := how_many_pixels_above(current + distance * Vector2i.UP, water)
+					set_pixel_update(current, true)
+					if weight - distance > 0:
+						for v in arr:
+							if !in_sim(v): continue
+							if image.get_pixelv(v) in [dirt]:
+								swap_pixels(current, v)
 								
+								break
 				
 						
 	#image = img_out
 	texture.update(image)
+
+func how_many_pixels_above(v: Vector2i, type: Color) -> int:
+	var y := 0
+	v += Vector2i.UP
+	while in_sim(v) and image.get_pixelv(v) == type:
+		v += Vector2i.UP
+		y += 1
+	return y
+	
+
 
 func _on_step_timeout() -> void:
 	step_simulation()

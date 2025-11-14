@@ -37,8 +37,8 @@ func _process(delta: float) -> void:
 		match holding:
 			seeds:
 				var should_drop := holding_acceleration.length_squared() > drop_acc_sq and tilted
-				if should_drop:
-					var pixel := sim.global_to_pixel(get_global_mouse_position())
+				var pixel := sim.global_to_pixel(get_global_mouse_position())
+				if should_drop and sim.is_pixel_empty(pixel):
 					sim.spawn_pixel(pixel, sim.pumpkin_seed)
 			watering_can:
 				var should_drop := tilted and watering_can_water_stored >= 1
@@ -46,11 +46,11 @@ func _process(delta: float) -> void:
 					var pixel := sim.global_to_pixel(watering_can_spout.global_position)
 					
 					const levels: int = 5
-					const water_per_level: float = 50.0 / levels
+					const water_per_level: float = watering_can_max_water / levels
 					for lvl in range(levels, 0, -1):
 						if watering_can_water_stored <= water_per_level * lvl:
 							var pxl_to_check := pixel + (levels - lvl) * Vector2i.DOWN
-							should_drop = should_drop and sim.image.get_pixelv(pxl_to_check) == sim.empty
+							should_drop = should_drop and sim.is_pixel_empty(pxl_to_check)
 							if !should_drop:
 								break
 						else:
