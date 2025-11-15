@@ -236,6 +236,120 @@ func how_many_pixels_above(v: Vector2i, type: Color) -> int:
 	return y
 
 
+# v should be the location of a wet_dirt pixel. returns v if nothing is found
+func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
+	# breadth first search starting from v and out dist
+	# prefer sides first over down
+	# we can go up, but only as long as the y value is at or below 1 + v.y
+
+	# the values of this array are vectors of (distance from v, and height relative to v)
+	var nodes: Dictionary[Vector2i, Vector2i]
+	var explore_next: Array[Vector2i]
+	var exploring: Array[Vector2i]
+	explore_next = [start]
+	nodes[start] = Vector2i(0, 0)
+	
+	while (!explore_next.is_empty()):
+		exploring = explore_next
+		explore_next.clear()
+		
+		var next: Vector2i
+		var next_col: Color
+		# left and right
+		for v in exploring:
+			# this node is already on the edge, don't explore
+			if nodes[v].x >= dist: continue
+			
+			# go left
+			next = v + Vector2i.LEFT
+			if !next in nodes: # if we haven't come across this node already -> try it
+				if !in_sim(next):
+					# if out of bounds add it to explored
+					nodes[next] = Vector2i(v.x + 1, v.y)
+				else:
+					next_col = image.get_pixelv(next)
+					if next_col == dirt:
+						# if dirt, return that value immediately
+						return next
+					elif next_col == wet_dirt:
+						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
+						nodes[next] = Vector2i(v.x + 1, v.y)
+						explore_next.append(next)
+					else:
+						# if not add it to explored (AKA add to dict)
+						nodes[next] = Vector2i(v.x + 1, v.y)
+			
+			# go right
+			next = v + Vector2i.RIGHT
+			if !next in nodes: # if we haven't come across this node already -> try it
+				if !in_sim(next):
+					# if out of bounds add it to explored
+					nodes[next] = Vector2i(v.x + 1, v.y)
+				else:
+					next_col = image.get_pixelv(next)
+					if next_col == dirt:
+						# if dirt, return that value immediately
+						return next
+					elif next_col == wet_dirt:
+						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
+						nodes[next] = Vector2i(v.x + 1, v.y)
+						explore_next.append(next)
+					else:
+						# if not add it to explored (AKA add to dict)
+						nodes[next] = Vector2i(v.x + 1, v.y)
+		
+		# down
+		for v in exploring:
+			# already at edge
+			if nodes[v].x >= dist: continue
+			
+			# go down
+			next = v + Vector2i.DOWN
+			if !next in nodes: # if we haven't come across this node already -> try it
+				if !in_sim(next):
+					# if out of bounds add it to explored
+					nodes[next] = Vector2i(v.x + 1, v.y - 1)
+				else:
+					next_col = image.get_pixelv(next)
+					if next_col == dirt:
+						# if dirt, return that value immediately
+						return next
+					elif next_col == wet_dirt:
+						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
+						nodes[next] = Vector2i(v.x + 1, v.y - 1)
+						explore_next.append(next)
+					else:
+						# if not add it to explored (AKA add to dict)
+						nodes[next] = Vector2i(v.x + 1, v.y - 1)
+		
+		# up
+		for v in exploring:
+			# already at edge or too high
+			if nodes[v].x >= dist or nodes[v].y >= 1: continue
+			
+			# go up
+			next = v + Vector2i.UP
+			if !next in nodes: # if we haven't come across this node already -> try it
+				if !in_sim(next):
+					# if out of bounds add it to explored
+					nodes[next] = Vector2i(v.x + 1, v.y + 1)
+				else:
+					next_col = image.get_pixelv(next)
+					if next_col == dirt:
+						# if dirt, return that value immediately
+						return next
+					elif next_col == wet_dirt:
+						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
+						nodes[next] = Vector2i(v.x + 1, v.y + 1)
+						explore_next.append(next)
+					else:
+						# if not add it to explored (AKA add to dict)
+						nodes[next] = Vector2i(v.x + 1, v.y + 1)
+	
+	
+	return start
+	
+
 # Individual Pixel Type Update
 #:dirt
 func _update_dirt(current: Vector2i) -> void:
@@ -261,9 +375,26 @@ func _update_water(current: Vector2i) -> void:
 		
 		image.set_pixelv(current, empty)
 		image.set_pixelv(v, wet_dirt)
-		set_pixel_update(v, true)
+		update_neighbors(current)
+		update_neighbors(v)
 		return
+	
+	# wet dirt adjacent to wet dirt
+	
+	for v in down3:
+		if !pixel_in(v, [wet_dirt]): continue
 		
+		# for each pixel in the diamond, starting from insde out and sides down		
+		var next := find_first_dirt(v, 3)
+		if next == v: continue # dirt wasn't found so the function returned the start point
+
+		image.set_pixelv(current, empty)
+		image.set_pixelv(next, wet_dirt)
+		update_neighbors(current)
+		update_neighbors(next)
+		print("got here!")
+		return
+	
 	# fill empty space on sides
 	for v in sides:
 		if !pixel_in(v, [empty]): continue
@@ -301,11 +432,16 @@ func _update_pumpkin_seed(current: Vector2i) -> void:
 	# get position before collision
 	var cur_vel := get_velocity(current)
 	var new_pos := current
+	var on_dirt := false
 	# TODO: extract this logic out
 	for j in range(1, round(cur_vel.y) + 1):
 		var temp := current + Vector2i(0,j)
-		if in_sim(temp) and image.get_pixelv(temp) in [empty, water]:
+		if in_sim(temp) and pixel_in(temp, [empty, water]):
 			new_pos = temp
+		elif in_sim(temp) and pixel_in(temp, [dirt, wet_dirt]):
+			new_pos = temp
+			cur_vel.y = max(cur_vel.y - 1, 0)
+			on_dirt = true
 		else:
 			break
 
@@ -313,6 +449,7 @@ func _update_pumpkin_seed(current: Vector2i) -> void:
 		swap_pixels(current, new_pos)
 	else:
 		cur_vel.y = 0
-	# update velocity		
-	cur_vel.y += gravity
+	# update velocity	
+	if !on_dirt:
+		cur_vel.y += gravity
 	set_velocity(new_pos, cur_vel)
