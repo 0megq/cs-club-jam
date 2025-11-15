@@ -115,8 +115,8 @@ func _process(delta: float) -> void:
 			$WateringCan/Fill.modulate.a = 1
 			
 		var can_px_pos := sim.global_to_pixel(watering_can.global_position)
-		if can_in_fill_spot and sim.image.get_pixelv(can_px_pos) == sim.water and watering_can_water_stored < watering_can_max_water:
-			sim.image.set_pixelv(can_px_pos, sim.empty)
+		if can_in_fill_spot and sim.get_pixel(can_px_pos) == sim.water and watering_can_water_stored < watering_can_max_water:
+			sim.set_pixel(can_px_pos, sim.empty)
 			watering_can_water_stored += 0.5
 	
 	if spigot_on:
