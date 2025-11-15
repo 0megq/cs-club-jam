@@ -23,8 +23,9 @@ var left: Vector2i
 var right: Vector2i
 var left_down: Vector2i
 var right_down: Vector2i
-#var down3: Array[Vector2i]
-#var down5: Array[Vector2i]
+var down3: Array[Vector2i]
+var down5: Array[Vector2i]
+var sides: Array[Vector2i]
 
 #:setup
 func _ready() -> void:
@@ -50,7 +51,7 @@ func setup_image() -> void:
 	image.fill(empty)
 	var rect := Rect2i(0, size.y * 0.7, size.x, size.y * 0.3 + 1)
 	image.fill_rect(rect, dirt)
-	var surface := size.y * 0.7
+	var surface := int(size.y * 0.7)
 	for x in 30:
 		var height = 30 - x
 		image.fill_rect(Rect2i(x - 1, surface, 1, height), empty)
@@ -90,7 +91,23 @@ func _step_simulation() -> void:
 			left_down = current + Vector2i.LEFT + Vector2i.DOWN
 			right_down = current + Vector2i.RIGHT + Vector2i.DOWN
 			
-			#down3 = 
+			down3 = [down]
+			var temp = [left_down, right_down]
+			temp.shuffle()
+			down3.append_array(temp)
+			
+			for i in range(down3.size() - 1, -1, -1):
+				if in_sim(down3[i]): continue
+				down3.remove_at(i)
+						
+			sides = [left, right]
+			sides.shuffle()
+			for i in range(sides.size() - 1, -1, -1):
+				if in_sim(sides[i]): continue
+				sides.remove_at(i)
+			
+			down5 = down3 + sides		
+			
 			
 			set_pixel_update(current, false)
 			if color == dirt:
@@ -127,11 +144,13 @@ func spawn_pixel(pos: Vector2i, color: Color, update := true, velocity := Vector
 	return true
 
 # Essential Setters and Getters
-#func set_pixel(pos: Vector2i, color: Color) -> void:
-	#image.set_pixelv(pos, color)
-#
-#func get_pixel(pos: Vector2i) -> Color:
-	#return image.get_pixelv(pos)
+
+# For external use only
+func set_pixel(pos: Vector2i, color: Color) -> void:
+	image.set_pixelv(pos, color)
+# For external use only
+func get_pixel(pos: Vector2i) -> Color:
+	return image.get_pixelv(pos)
 
 
 func set_velocity(v: Vector2i, vel: Vector2) -> void:
@@ -176,6 +195,10 @@ func get_neighbors(v: Vector2i) -> Array[Vector2i]:
 			res.append(v + x + y)
 	
 	return res	
+
+func pixel_in(v: Vector2i, arr: PackedColorArray) -> bool:
+	return image.get_pixelv(v) in arr
+
 #END
 
 #:functionality
@@ -216,88 +239,69 @@ func how_many_pixels_above(v: Vector2i, type: Color) -> int:
 # Individual Pixel Type Update
 #:dirt
 func _update_dirt(current: Vector2i) -> void:
-	var arr: Array[Vector2i] = [down]
-	var lr := [left_down, right_down]
-	lr.shuffle()
-	arr.append_array(lr)
-	for v in arr:
-		if in_sim(v) and image.get_pixelv(v) in [empty, water]:
-			swap_pixels(current, v)
-			break
+	# fill empty/water below
+	for v in down3:
+		if !pixel_in(v, [empty, water]): continue
+		
+		swap_pixels(current, v)
+		break
 
 #:water
 func _update_water(current: Vector2i) -> void:
-	var arr: Array[Vector2i] = [down]
-	var lr := [left_down, right_down]
-	lr.shuffle()
-	arr.append_array(lr)
-	var placed := false
-	for v in arr:
-		if !in_sim(v): continue
-		if image.get_pixelv(v) in [empty]:
-			swap_pixels(current, v)
-			placed = true
-			break
-	if !placed:
-		for v in arr:
-			if !in_sim(v): continue
-			if image.get_pixelv(v) in [dirt]:
-				image.set_pixelv(current, empty)
-				image.set_pixelv(v, wet_dirt)
-				set_pixel_update(v, true)
-				placed = true
-				break
-	if !placed:
-		arr = [right, left]
-		arr.shuffle()
-		for v in arr:
-			if !in_sim(v): continue
-			if image.get_pixelv(v) in [empty]:
-				swap_pixels(current, v)
-				placed = true
-				break
-	if !placed:
-		for v in arr:
-			if !in_sim(v): continue
-			if image.get_pixelv(v) in [dirt]:
-				image.set_pixelv(current, empty)
-				image.set_pixelv(v, wet_dirt)
-				set_pixel_update(v, true)
-				update_neighbors(v)
-				placed = true
-				break
+	# fill empty space below
+	for v in down3:
+		if !pixel_in(v, [empty]): continue
+		
+		swap_pixels(current, v)
+		return
+	
+	# wet dirt below
+	for v in down3:
+		if !pixel_in(v, [dirt]): continue
+		
+		image.set_pixelv(current, empty)
+		image.set_pixelv(v, wet_dirt)
+		set_pixel_update(v, true)
+		return
+		
+	# fill empty space on sides
+	for v in sides:
+		if !pixel_in(v, [empty]): continue
+		
+		swap_pixels(current, v)
+		return
+	
+	# wet dirt on sides
+	for v in sides:
+		if !pixel_in(v, [dirt]): continue
+		
+		image.set_pixelv(current, empty)
+		image.set_pixelv(v, wet_dirt)
+		set_pixel_update(v, true)
+		update_neighbors(v)
+		return
 
 func _update_wet_dirt(current: Vector2i) -> void:
-	var arr: Array[Vector2i] = [down]
-	var lr := [left_down, right_down]
-	lr.shuffle()
-	lr.shuffle()
-	lr.shuffle()
-	arr.append_array(lr)
-	var placed := false
-	for v in arr:
-		if !in_sim(v): continue
-		if image.get_pixelv(v) in [empty, water]:
-			swap_pixels(current, v)
-			placed = true
-			break
-	if !placed:
-		var distance := how_many_pixels_above(current, wet_dirt)
-		var weight := how_many_pixels_above(current + distance * Vector2i.UP, water)
-		set_pixel_update(current, true)
-		if weight - distance > 0:
-			for v in arr:
-				if !in_sim(v): continue
-				if image.get_pixelv(v) in [dirt]:
-					swap_pixels(current, v)
-					
-					break
+	for v in down3:
+		if !pixel_in(v, [empty, water]): continue
+		
+		swap_pixels(current, v)
+		return
+	#var distance := how_many_pixels_above(current, wet_dirt)
+	#var weight := how_many_pixels_above(current + distance * Vector2i.UP, water)
+	#set_pixel_update(current, true)
+	#if weight - distance <= 0: return
+	#for v in down3:
+		#if !pixel_in(v, [dirt]): continue
+		#swap_pixels(current, v)
+		#return
 
 #:seed
 func _update_pumpkin_seed(current: Vector2i) -> void:
 	# get position before collision
 	var cur_vel := get_velocity(current)
 	var new_pos := current
+	# TODO: extract this logic out
 	for j in range(1, round(cur_vel.y) + 1):
 		var temp := current + Vector2i(0,j)
 		if in_sim(temp) and image.get_pixelv(temp) in [empty, water]:
