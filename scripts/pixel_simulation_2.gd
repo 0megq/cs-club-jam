@@ -250,7 +250,7 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 	nodes[start] = Vector2i(0, 0)
 	
 	while (!explore_next.is_empty()):
-		exploring = explore_next
+		exploring = explore_next.duplicate()
 		explore_next.clear()
 		
 		var next: Vector2i
@@ -265,7 +265,7 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 			if !next in nodes: # if we haven't come across this node already -> try it
 				if !in_sim(next):
 					# if out of bounds add it to explored
-					nodes[next] = Vector2i(v.x + 1, v.y)
+					nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y)
 				else:
 					next_col = image.get_pixelv(next)
 					if next_col == dirt:
@@ -273,18 +273,18 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 						return next
 					elif next_col == wet_dirt:
 						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
-						nodes[next] = Vector2i(v.x + 1, v.y)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y)
 						explore_next.append(next)
 					else:
 						# if not add it to explored (AKA add to dict)
-						nodes[next] = Vector2i(v.x + 1, v.y)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y)
 			
 			# go right
 			next = v + Vector2i.RIGHT
 			if !next in nodes: # if we haven't come across this node already -> try it
 				if !in_sim(next):
 					# if out of bounds add it to explored
-					nodes[next] = Vector2i(v.x + 1, v.y)
+					nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y)
 				else:
 					next_col = image.get_pixelv(next)
 					if next_col == dirt:
@@ -292,11 +292,11 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 						return next
 					elif next_col == wet_dirt:
 						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
-						nodes[next] = Vector2i(v.x + 1, v.y)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y)
 						explore_next.append(next)
 					else:
 						# if not add it to explored (AKA add to dict)
-						nodes[next] = Vector2i(v.x + 1, v.y)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y)
 		
 		# down
 		for v in exploring:
@@ -308,7 +308,7 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 			if !next in nodes: # if we haven't come across this node already -> try it
 				if !in_sim(next):
 					# if out of bounds add it to explored
-					nodes[next] = Vector2i(v.x + 1, v.y - 1)
+					nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y - 1)
 				else:
 					next_col = image.get_pixelv(next)
 					if next_col == dirt:
@@ -316,11 +316,11 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 						return next
 					elif next_col == wet_dirt:
 						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
-						nodes[next] = Vector2i(v.x + 1, v.y - 1)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y - 1)
 						explore_next.append(next)
 					else:
 						# if not add it to explored (AKA add to dict)
-						nodes[next] = Vector2i(v.x + 1, v.y - 1)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y - 1)
 		
 		# up
 		for v in exploring:
@@ -332,7 +332,7 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 			if !next in nodes: # if we haven't come across this node already -> try it
 				if !in_sim(next):
 					# if out of bounds add it to explored
-					nodes[next] = Vector2i(v.x + 1, v.y + 1)
+					nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y + 1)
 				else:
 					next_col = image.get_pixelv(next)
 					if next_col == dirt:
@@ -340,11 +340,11 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 						return next
 					elif next_col == wet_dirt:
 						# if wet add it to explore_next (if not already in the dictionary) and store distance and height
-						nodes[next] = Vector2i(v.x + 1, v.y + 1)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y + 1)
 						explore_next.append(next)
 					else:
 						# if not add it to explored (AKA add to dict)
-						nodes[next] = Vector2i(v.x + 1, v.y + 1)
+						nodes[next] = Vector2i(nodes[v].x + 1, nodes[v].y + 1)
 	
 	
 	return start
@@ -362,6 +362,23 @@ func _update_dirt(current: Vector2i) -> void:
 
 #:water
 func _update_water(current: Vector2i) -> void:
+	# fill empty space below
+	for v in [down]:
+		if !pixel_in(v, [empty]): continue
+		
+		swap_pixels(current, v)
+		return
+	
+	# wet dirt below
+	for v in [down]:
+		if !pixel_in(v, [dirt]): continue
+		
+		image.set_pixelv(current, empty)
+		image.set_pixelv(v, wet_dirt)
+		update_neighbors(current)
+		update_neighbors(v)
+		return
+		
 	# fill empty space below
 	for v in down3:
 		if !pixel_in(v, [empty]): continue
@@ -383,18 +400,15 @@ func _update_water(current: Vector2i) -> void:
 	
 	for v in down3:
 		if !pixel_in(v, [wet_dirt]): continue
-		
 		# for each pixel in the diamond, starting from insde out and sides down		
 		var next := find_first_dirt(v, 3)
 		if next == v: continue # dirt wasn't found so the function returned the start point
-
 		image.set_pixelv(current, empty)
 		image.set_pixelv(next, wet_dirt)
 		update_neighbors(current)
 		update_neighbors(next)
-		print("got here!")
+		
 		return
-	
 	# fill empty space on sides
 	for v in sides:
 		if !pixel_in(v, [empty]): continue
