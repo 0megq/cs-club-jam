@@ -610,6 +610,8 @@ func _update_sprout(current: Vector2i) -> void:
 						var my_dirt := get_wet_dirt_touching_plant(current)
 						if my_dirt != current:
 							image.set_pixelv(my_dirt, dirt)
+							set_pixel_update(my_dirt, true)
+							update_neighbors8(my_dirt)
 							# remove set the wet dirt in the network to normal dirt
 							image.set_pixelv(new_guy, plant)
 							plant_data.next = new_guy
