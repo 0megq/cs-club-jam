@@ -7,14 +7,23 @@ const wet_dirt := Colors.colors[5-3]
 const dirt := Colors.colors[6-3]
 const water := Colors.colors[21-3]
 const pumpkin_seed := Colors.colors[11-3]
+const sprout := Colors.colors[12-3]
+const plant := Colors.colors[13-3]
 const gravity: float = .1
 const step_interval: float = 0.01
+const step_freq: float = 1 / step_interval
+class Plant:
+	var state: int = 0
+	var state_start_time: float
+	var next: Vector2i
+	var growth_this_stage: int = 0
 
 @export_tool_button("Run Setup") var setup: Callable = setup_image
 
 var image: Image
 var update_grid: Array[bool]
 var velocity_grid: Array[Vector2]
+var plants: Dictionary[Vector2i, Plant]
 
 # Putting these here, to make my life easier. Might be a bad idea
 # These are only to be used within _update_pixel_name functions
@@ -110,14 +119,17 @@ func _step_simulation() -> void:
 			
 			
 			set_pixel_update(current, false)
-			if color == dirt:
-				_update_dirt(current)
-			elif color == water:
-				_update_water(current)
-			elif color == pumpkin_seed:
-				_update_pumpkin_seed(current)
-			elif color == wet_dirt:
-				_update_wet_dirt(current)
+			match color:
+				dirt:
+					_update_dirt(current)
+				water:
+					_update_water(current)
+				wet_dirt:
+					_update_wet_dirt(current)
+				pumpkin_seed:
+					_update_pumpkin_seed(current)
+				sprout:
+					_update_sprout(current)
 
 	_commit_pixel_updates_to_texture()
 
@@ -186,15 +198,27 @@ func get_mouse_pixel_pos() -> Vector2i:
 func in_sim(v: Vector2i) -> bool:
 	return v.x >= 0 and v.y >= 0 and v.x < size.x and v.y < size.y
 
-		
-func get_neighbors(v: Vector2i) -> Array[Vector2i]:
-	var res: Array[Vector2i]
-	for x in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.ZERO]:
-		for y in [Vector2i.UP, Vector2i.DOWN, Vector2i.ZERO]:	
-			if x == y: continue
-			res.append(v + x + y)
+func get_down3(v: Vector2i) -> Array[Vector2i]:
+	var arr: Array[Vector2i] = [v + Vector2i.DOWN]
+	var temp: Array[Vector2i] = [v + Vector2i(1, 1), v + Vector2i(-1, 1)]
+	temp.shuffle()
+	arr.append_array(temp)
 	
-	return res	
+	return arr
+
+func get_down5(v: Vector2i) -> Array[Vector2i]:
+	var arr: Array[Vector2i] = get_down3(v)
+	var temp: Array[Vector2i] = [v + Vector2i(1, 0), v + Vector2i(-1, 0)]
+	temp.shuffle()
+	arr.append_array(temp)
+	
+	return arr
+		
+func get_neighbors8(v: Vector2i) -> Array[Vector2i]:
+	return [v + Vector2i.LEFT, v + Vector2i.RIGHT, v + Vector2i.DOWN, v + Vector2i.UP, v + Vector2i(1, 1), v + Vector2i(-1, 1), Vector2i(-1, -1), Vector2i(1, -1)]
+	
+func get_neighbors4(v: Vector2i) -> Array[Vector2i]:
+	return [v + Vector2i.LEFT, v + Vector2i.RIGHT, v + Vector2i.DOWN, v + Vector2i.UP]
 
 func pixel_in(v: Vector2i, arr: PackedColorArray) -> bool:
 	return image.get_pixelv(v) in arr
@@ -216,12 +240,12 @@ func swap_pixels(a: Vector2i, b: Vector2i) -> void:
 	set_velocity(a, vel_b)
 	set_velocity(b, vel_a)
 	
-	update_neighbors(a)
-	update_neighbors(b)
+	update_neighbors8(a)
+	update_neighbors8(b)
 
 
-func update_neighbors(v: Vector2i) -> void:
-	for nei in get_neighbors(v):
+func update_neighbors8(v: Vector2i) -> void:
+	for nei in get_neighbors8(v):
 		if in_sim(nei):
 			set_pixel_update(nei, true)
 
@@ -237,7 +261,7 @@ func how_many_pixels_above(v: Vector2i, type: Color) -> int:
 
 
 # v should be the location of a wet_dirt pixel. returns v if nothing is found
-func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
+func find_first_dry_dirt(start: Vector2i, dist: int) -> Vector2i:
 	# breadth first search starting from v and out dist
 	# prefer sides first over down
 	# we can go up, but only as long as the y value is at or below 1 + v.y
@@ -325,7 +349,7 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 		# up
 		for v in exploring:
 			# already at edge or too high
-			if nodes[v].x >= dist or nodes[v].y >= 1: continue
+			if nodes[v].x >= dist or nodes[v].y >= 2: continue
 			
 			# go up
 			next = v + Vector2i.UP
@@ -348,7 +372,30 @@ func find_first_dirt(start: Vector2i, dist: int) -> Vector2i:
 	
 	
 	return start
+
+func get_wet_dirt_touching_plant(start: Vector2i) -> Vector2i:
+	# check for wet dirt around start
 	
+	var plant_exploring: Array[Vector2i] = [start]
+	var plant_to_explore: Array[Vector2i]
+	
+	for nei in get_neighbors4(start):
+		if in_sim(nei) and pixel_in(nei, [wet_dirt]): return nei
+	for nei in get_neighbors8(start):
+		if in_sim(nei) and pixel_in(nei, [plant]): plant_to_explore.append(nei)
+		
+	
+	while !plant_to_explore.is_empty():
+		plant_exploring = plant_to_explore.duplicate()
+		plant_to_explore.clear()
+		
+		for p in plant_exploring:
+			for nei in get_neighbors4(p):
+				if in_sim(nei) and pixel_in(nei, [wet_dirt]): return nei
+			for nei in get_down3(p):
+				if in_sim(nei) and pixel_in(nei, [plant]): plant_to_explore.append(nei)
+	
+	return start
 
 # Individual Pixel Type Update
 #:dirt
@@ -375,8 +422,8 @@ func _update_water(current: Vector2i) -> void:
 		
 		image.set_pixelv(current, empty)
 		image.set_pixelv(v, wet_dirt)
-		update_neighbors(current)
-		update_neighbors(v)
+		update_neighbors8(current)
+		update_neighbors8(v)
 		return
 		
 	# fill empty space below
@@ -392,8 +439,8 @@ func _update_water(current: Vector2i) -> void:
 		
 		image.set_pixelv(current, empty)
 		image.set_pixelv(v, wet_dirt)
-		update_neighbors(current)
-		update_neighbors(v)
+		update_neighbors8(current)
+		update_neighbors8(v)
 		return
 	
 	# wet dirt adjacent to wet dirt
@@ -401,12 +448,12 @@ func _update_water(current: Vector2i) -> void:
 	for v in down3:
 		if !pixel_in(v, [wet_dirt]): continue
 		# for each pixel in the diamond, starting from insde out and sides down		
-		var next := find_first_dirt(v, 3)
+		var next := find_first_dry_dirt(v, 4)
 		if next == v: continue # dirt wasn't found so the function returned the start point
 		image.set_pixelv(current, empty)
 		image.set_pixelv(next, wet_dirt)
-		update_neighbors(current)
-		update_neighbors(next)
+		update_neighbors8(current)
+		update_neighbors8(next)
 		
 		return
 	# fill empty space on sides
@@ -423,7 +470,7 @@ func _update_water(current: Vector2i) -> void:
 		image.set_pixelv(current, empty)
 		image.set_pixelv(v, wet_dirt)
 		set_pixel_update(v, true)
-		update_neighbors(v)
+		update_neighbors8(v)
 		return
 
 func _update_wet_dirt(current: Vector2i) -> void:
@@ -463,7 +510,110 @@ func _update_pumpkin_seed(current: Vector2i) -> void:
 		swap_pixels(current, new_pos)
 	else:
 		cur_vel.y = 0
+		# check to see if surrounded by 2 wet dirt
+		var wet_dirt_counter := 0
+		for nei in get_neighbors4(current):
+			if pixel_in(nei, [wet_dirt]):
+				wet_dirt_counter += 1
+
+		if wet_dirt_counter >= 2:
+			image.set_pixelv(current, sprout)
+			set_pixel_update(current, true)
+		
+		
 	# update velocity	
 	if !on_dirt:
 		cur_vel.y += gravity
 	set_velocity(new_pos, cur_vel)
+
+#:sprout
+func _update_sprout(current: Vector2i) -> void:
+	# sprout needs to do something now
+	if !current in plants:
+		print("creating new plant")
+		plants[current] = Plant.new()
+		plants[current].state = 0
+		plants[current].state_start_time = Time.get_ticks_msec()
+		plants[current].growth_this_stage = 0
+	else:
+		var plant_data := plants[current]
+		# after 1 second, the pixel will try to grow once and consume a wet dirt
+		# then wait like 10-20 seconds for more growth
+		match plant_data.state:
+			0:
+				if Time.get_ticks_msec() - plant_data.state_start_time > 3000:
+					# grow a new thing
+					var neighbors := get_neighbors8(current)
+					neighbors.shuffle()
+					var new_guy: Vector2i
+					var new_guy_grew: bool = false
+					for nei in neighbors:
+						if !in_sim(nei) or !pixel_in(nei, [wet_dirt]): continue
+						image.set_pixelv(nei, plant)
+						new_guy = nei
+						new_guy_grew = true
+						break
+					
+					if new_guy_grew:
+						# go to next stage
+						plant_data.state += 1
+						plant_data.state_start_time = Time.get_ticks_msec()
+						plant_data.next = [current, new_guy].pick_random()		
+						plant_data.growth_this_stage = 0
+					else:
+						# kill the plant
+						# this should never happen
+						pass
+			1:
+				if Time.get_ticks_msec() - plant_data.state_start_time > 3000:
+					var new_guy: Vector2i
+					var new_guy_grew: bool = false
+					var _down3 := get_down3(plant_data.next)
+					_down3.shuffle()
+					for nei in _down3:
+						if !in_sim(nei) or !pixel_in(nei, [wet_dirt]): continue
+						image.set_pixelv(nei, plant)
+						new_guy = nei
+						new_guy_grew = true
+						break
+					if new_guy_grew:
+						image.set_pixelv(new_guy, plant)
+						plant_data.next = new_guy
+						plant_data.state_start_time = Time.get_ticks_msec()
+						plant_data.growth_this_stage += 1
+					else:
+						pass
+						# reset timer and try to grow again X times and then show signs of unhealth
+				if plant_data.growth_this_stage > 2:
+					plant_data.state += 1
+					plant_data.state_start_time = Time.get_ticks_msec()
+					plant_data.next = current
+					plant_data.growth_this_stage = 0
+			2:
+				if Time.get_ticks_msec() - plant_data.state_start_time > 1000:
+					var new_guy: Vector2i = plant_data.next + Vector2i.UP
+					if pixel_in(new_guy, [wet_dirt]):
+						image.set_pixelv(new_guy, plant)
+						plant_data.next = new_guy
+						plant_data.state_start_time = Time.get_ticks_msec()
+						plant_data.growth_this_stage += 1
+					else:
+						var my_dirt := get_wet_dirt_touching_plant(current)
+						if my_dirt != current:
+							image.set_pixelv(my_dirt, dirt)
+							# remove set the wet dirt in the network to normal dirt
+							image.set_pixelv(new_guy, plant)
+							plant_data.next = new_guy
+							plant_data.state_start_time = Time.get_ticks_msec()
+							plant_data.growth_this_stage += 1
+				#if plant_data.growth_this_stage > 2:
+					#plant_data.state += 1
+					#plant_data.state_start_time = Time.get_ticks_msec()
+					#plant_data.growth_this_stage = 0
+			#3:
+				#if Time.get_ticks_msec() - plant_data.state_start_time > 2000:
+					
+					
+		plants[current] = plant_data
+
+	set_pixel_update(current, true)

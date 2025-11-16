@@ -1,7 +1,7 @@
 extends Node2D
 
 const drop_acc_sq: float = 10000 ** 2
-const watering_can_max_water: float = 50
+const watering_can_max_water: float = 100
 
 var spigot_on: bool = false
 var holding: Area2D = null
@@ -117,7 +117,7 @@ func _process(delta: float) -> void:
 		var can_px_pos := sim.global_to_pixel(watering_can.global_position)
 		if can_in_fill_spot and sim.get_pixel(can_px_pos) == sim.water and watering_can_water_stored < watering_can_max_water:
 			sim.set_pixel(can_px_pos, sim.empty)
-			watering_can_water_stored += 0.5
+			watering_can_water_stored += 1
 	
 	if spigot_on:
 		var pixel := sim.global_to_pixel($Spigot/Spawn.global_position)
