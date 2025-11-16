@@ -214,9 +214,18 @@ func get_down5(v: Vector2i) -> Array[Vector2i]:
 	
 	return arr
 		
+
+func get_neighbors24(v: Vector2i) -> Array[Vector2i]:
+	var res: Array[Vector2i]
+	for x in [-2, -1, 0, 1, 2]:
+		for y in [-2, -1, 0, 1, 2]:
+			if x==y: continue
+			res.append(v + Vector2i(x,y))
+	return res
+
 func get_neighbors8(v: Vector2i) -> Array[Vector2i]:
 	return [v + Vector2i.LEFT, v + Vector2i.RIGHT, v + Vector2i.DOWN, v + Vector2i.UP, v + Vector2i(1, 1), v + Vector2i(-1, 1), Vector2i(-1, -1), Vector2i(1, -1)]
-	
+
 func get_neighbors4(v: Vector2i) -> Array[Vector2i]:
 	return [v + Vector2i.LEFT, v + Vector2i.RIGHT, v + Vector2i.DOWN, v + Vector2i.UP]
 
@@ -379,7 +388,7 @@ func get_wet_dirt_touching_plant(start: Vector2i) -> Vector2i:
 	var plant_exploring: Array[Vector2i] = [start]
 	var plant_to_explore: Array[Vector2i]
 	
-	for nei in get_neighbors4(start):
+	for nei in get_neighbors24(start):
 		if in_sim(nei) and pixel_in(nei, [wet_dirt]): return nei
 	for nei in get_neighbors8(start):
 		if in_sim(nei) and pixel_in(nei, [plant]): plant_to_explore.append(nei)
@@ -390,7 +399,7 @@ func get_wet_dirt_touching_plant(start: Vector2i) -> Vector2i:
 		plant_to_explore.clear()
 		
 		for p in plant_exploring:
-			for nei in get_neighbors4(p):
+			for nei in get_neighbors24(p):
 				if in_sim(nei) and pixel_in(nei, [wet_dirt]): return nei
 			for nei in get_down3(p):
 				if in_sim(nei) and pixel_in(nei, [plant]): plant_to_explore.append(nei)
