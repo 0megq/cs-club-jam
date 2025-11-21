@@ -18,11 +18,17 @@ class Plant:
 	var state: int = 0
 	var state_start_time: float
 	var next: Vector2i
+	var leaf_to_grow: Vector2i
+	var leaf_growth_this_stage: int = 0
 	var growth_this_stage: int = 0
 	var hurt_times: float = 0
+	var plant_height: int = 0
+	var leaves: int = 0
 
 @export_tool_button("Run Setup") var setup: Callable = setup_image
 
+var plants_created: int = 0
+var plants_alive: int = 0
 var image: Image
 var update_grid: Array[bool]
 var velocity_grid: Array[Vector2]
@@ -87,6 +93,7 @@ func _on_step_timeout() -> void:
 
 #:update
 func _step_simulation() -> void:
+	plants_alive = 0
 	for y in range(size.y - 1, -1, -1):
 		for x in size.x:
 			# pixel selection
@@ -135,7 +142,24 @@ func _step_simulation() -> void:
 					_update_sprout(current)
 				dying_plant:
 					_update_dying_plant(current)
-
+				leaf:
+					set_pixel_update(current, true)
+					var has_friend := false
+					for nei in get_neighbors8(current):
+						if pixel_in(nei, [sprout, leaf, plant]):
+							has_friend = true
+					if !has_friend:
+						image.set_pixelv(current, dying_plant)
+				plant:
+					set_pixel_update(current, true)
+					var has_friend := false
+					for nei in get_neighbors8(current):
+						if pixel_in(nei, [sprout, leaf, plant]):
+							has_friend = true
+					if !has_friend:
+						image.set_pixelv(current, dying_plant)
+						
+						
 	_commit_pixel_updates_to_texture()
 
 func _commit_pixel_updates_to_texture() -> void:
@@ -186,7 +210,7 @@ func get_pixel_update(v: Vector2i) -> bool:
 
 # Helpers
 func is_pixel_empty(v: Vector2i) -> bool:
-	return image.get_pixelv(v) == empty
+	return in_sim(v) and image.get_pixelv(v) == empty
 
 #:coordinate
 func global_to_pixel(global: Vector2) -> Vector2i:
@@ -235,7 +259,7 @@ func get_neighbors4(v: Vector2i) -> Array[Vector2i]:
 	return [v + Vector2i.LEFT, v + Vector2i.RIGHT, v + Vector2i.DOWN, v + Vector2i.UP]
 
 func pixel_in(v: Vector2i, arr: PackedColorArray) -> bool:
-	return image.get_pixelv(v) in arr
+	return in_sim(v) and image.get_pixelv(v) in arr
 
 #END
 
@@ -439,7 +463,7 @@ func get_plant_pixels(start: Vector2i) -> Array[Vector2i]:
 		
 		for p in plant_exploring:
 			for nei in get_neighbors8(p):
-				if in_sim(nei) and pixel_in(nei, [plant]) and !nei in plant_pixels: plant_to_explore.append(nei)
+				if in_sim(nei) and pixel_in(nei, [plant, leaf]) and !nei in plant_pixels: plant_to_explore.append(nei)
 
 	return plant_pixels
 
@@ -536,10 +560,10 @@ func _update_wet_dirt(current: Vector2i) -> void:
 
 #:seed
 func _update_pumpkin_seed(current: Vector2i) -> void:
+	set_pixel_update(current, true)
 	# get position before collision
 	var cur_vel := get_velocity(current)
 	var new_pos := current
-	var on_dirt := false
 	# TODO: extract this logic out
 	for j in range(1, round(cur_vel.y) + 1):
 		var temp := current + Vector2i(0,j)
@@ -547,8 +571,7 @@ func _update_pumpkin_seed(current: Vector2i) -> void:
 			new_pos = temp
 		elif in_sim(temp) and pixel_in(temp, [dirt, wet_dirt]):
 			new_pos = temp
-			cur_vel.y = max(cur_vel.y - 1, 0)
-			on_dirt = true
+			cur_vel.y = max(cur_vel.y - 2, 0)
 		else:
 			break
 
@@ -564,12 +587,12 @@ func _update_pumpkin_seed(current: Vector2i) -> void:
 
 		if wet_dirt_counter >= 2:
 			image.set_pixelv(current, sprout)
+			plants_created += 1
 			set_pixel_update(current, true)
 		
 		
 	# update velocity	
-	if !on_dirt:
-		cur_vel.y += gravity
+	cur_vel.y += gravity
 	set_velocity(new_pos, cur_vel)
 
 #:sprout
@@ -580,6 +603,8 @@ func _update_sprout(current: Vector2i) -> void:
 		plants[current].state = 0
 		plants[current].state_start_time = Time.get_ticks_msec()
 		plants[current].growth_this_stage = 0
+		plants[current].leaf_growth_this_stage = 0
+		plants[current].leaf_to_grow = -Vector2i.ONE
 	else:
 		var plant_data := plants[current]
 		# after 1 second, the pixel will try to grow once and consume a wet dirt
@@ -607,10 +632,7 @@ func _update_sprout(current: Vector2i) -> void:
 						plant_data.next = [current, new_guy].pick_random()		
 						plant_data.growth_this_stage = 0
 					else:
-						image.set_pixelv(current, dying_plant)
-						plants.erase(current)
-						# kill the plant
-						# this should never happen
+						kill_plant(current)
 						pass
 			1:
 				if Time.get_ticks_msec() - plant_data.state_start_time > 3000:
@@ -634,10 +656,7 @@ func _update_sprout(current: Vector2i) -> void:
 						plant_data.hurt_times += 1
 						plant_data.state_start_time = Time.get_ticks_msec()
 						if plant_data.hurt_times > 2:
-							for px in get_plant_pixels(current):
-								image.set_pixelv(px, dying_plant)
-								plants.erase(current)
-							# kill
+							kill_plant(current)
 						# reset timer and try to grow again X times and then show signs of unhealth
 				if plant_data.growth_this_stage > 2:
 					plant_data.state += 1
@@ -648,6 +667,7 @@ func _update_sprout(current: Vector2i) -> void:
 			2:
 				if Time.get_ticks_msec() - plant_data.state_start_time > 1000:
 					var new_guy: Vector2i = plant_data.next + Vector2i.UP
+					#new_guy.x += [-1, 0, 1].pick_random()
 					if pixel_in(new_guy, [wet_dirt]):
 						image.set_pixelv(new_guy, plant)
 						plant_data.next = new_guy
@@ -663,6 +683,7 @@ func _update_sprout(current: Vector2i) -> void:
 							# remove set the wet dirt in the network to normal dirt
 							image.set_pixelv(new_guy, plant)
 							plant_data.next = new_guy
+							plant_data.plant_height += 1
 							plant_data.state_start_time = Time.get_ticks_msec()
 							plant_data.growth_this_stage += 1
 							plant_data.hurt_times = max(plant_data.hurt_times - 0.5, 0)
@@ -670,20 +691,21 @@ func _update_sprout(current: Vector2i) -> void:
 						else:
 							plant_data.hurt_times += 1
 							plant_data.state_start_time = Time.get_ticks_msec()
-							if plant_data.hurt_times > 3:
-								for px in get_plant_pixels(current):
-									image.set_pixelv(px, dying_plant)
-									set_pixel_update(current, true)
-									plants.erase(current)
-				if plant_data.growth_this_stage > 2:
+							if plant_data.hurt_times > 5:
+								kill_plant(current)
+				if plant_data.plant_height > int(plant_data.leaves * .5) + 2:
 					plant_data.state += 1
 					plant_data.state_start_time = Time.get_ticks_msec()
 					plant_data.growth_this_stage = 0
+					plant_data.leaf_growth_this_stage = 0
 			3:
 				if Time.get_ticks_msec() - plant_data.state_start_time > 2000:
 					# get some wet dirt
 					var my_dirt := get_wet_dirt_touching_plant(current)
 					var new_guy := get_first_available_leaf_spot(current)
+					if plant_data.leaf_growth_this_stage > 0:
+						new_guy = plant_data.leaf_to_grow
+
 					if my_dirt != current and new_guy != current:
 						# consume the water
 						image.set_pixelv(my_dirt, dirt)
@@ -694,24 +716,32 @@ func _update_sprout(current: Vector2i) -> void:
 						image.set_pixelv(new_guy, leaf)
 						plant_data.state_start_time = Time.get_ticks_msec()
 						plant_data.growth_this_stage += 1
+						plant_data.leaf_growth_this_stage += 1
+						plant_data.leaves += 1
 						plant_data.hurt_times = max(plant_data.hurt_times - 0.5, 0)
 						update_neighbors8(new_guy)
+						
+						if pixel_in(new_guy + Vector2i.LEFT, [empty]):
+							plant_data.leaf_to_grow = new_guy + Vector2i.LEFT
+						elif pixel_in(new_guy + Vector2i.RIGHT, [empty]):
+							plant_data.leaf_to_grow = new_guy + Vector2i.RIGHT
+						else:
+							plant_data.leaf_to_grow = get_first_available_leaf_spot(current)
 					else:
 						# failed growth
 						plant_data.hurt_times += 1
 						plant_data.state_start_time = Time.get_ticks_msec()
 						if plant_data.hurt_times > 7:
-							for px in get_plant_pixels(current):
-								image.set_pixelv(px, dying_plant)
-								set_pixel_update(current, true)
-								plants.erase(current)
+							kill_plant(current)
 				if plant_data.growth_this_stage > 1:
 					plant_data.state = 2
 					plant_data.state_start_time = Time.get_ticks_msec()
-					plant_data.growth_this_stage = 0	
+					plant_data.growth_this_stage = 0
+					plant_data.leaf_growth_this_stage += 1
 					
 		plants[current] = plant_data
-
+	
+	plants_alive += 1
 	set_pixel_update(current, true)
 
 #:dying plant
@@ -724,7 +754,13 @@ func _update_dying_plant(current: Vector2i) -> void:
 		update_neighbors8(current)
 	for v in down3:
 		if !pixel_in(v, [empty, water]): continue
-		
 		swap_pixels(current, v)
 		break
 	set_pixel_update(current, true)
+
+
+func kill_plant(current: Vector2i) -> void:
+	for px in get_plant_pixels(current):
+		image.set_pixelv(px, dying_plant)
+		update_neighbors8(px)
+		plants.erase(current)

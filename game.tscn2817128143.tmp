@@ -61,19 +61,19 @@ position = Vector2(6, 5)
 [node name="WateringCan" type="Area2D" parent="."]
 position = Vector2(226, 96)
 
-[node name="Outline" type="Sprite2D" parent="WateringCan"]
-texture = ExtResource("3_fc0e3")
-offset = Vector2(0, 0.5)
-flip_h = true
-hframes = 10
-frame = 1
-
 [node name="Fill" type="Sprite2D" parent="WateringCan"]
 texture = ExtResource("3_fc0e3")
 offset = Vector2(0, 0.5)
 flip_h = true
-hframes = 10
+region_enabled = true
 region_rect = Rect2(14, 0, 14, 13)
+
+[node name="Outline" type="Sprite2D" parent="WateringCan"]
+texture = ExtResource("3_fc0e3")
+offset = Vector2(0, 0.5)
+flip_h = true
+region_enabled = true
+region_rect = Rect2(0, 0, 14, 13)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WateringCan"]
 position = Vector2(0, 0.5)
@@ -138,10 +138,8 @@ position = Vector2(120, 90)
 texture = ExtResource("8_j5wjh")
 
 [node name="Label" type="Label" parent="."]
-offset_left = 3.0
-offset_top = 3.0
-offset_right = 100.0
-offset_bottom = 52.0
+offset_right = 97.0
+offset_bottom = 49.0
 scale = Vector2(0.25, 0.25)
 text = "Plants Alive:
 Plants Dead:"

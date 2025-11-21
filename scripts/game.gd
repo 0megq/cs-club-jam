@@ -40,6 +40,7 @@ func _process(delta: float) -> void:
 				var pixel := sim.global_to_pixel(get_global_mouse_position())
 				if should_drop and sim.is_pixel_empty(pixel):
 					sim.spawn_pixel(pixel, sim.pumpkin_seed)
+					sim.update_neighbors8(pixel)
 			watering_can:
 				var should_drop := tilted and watering_can_water_stored >= 1
 				if should_drop:
@@ -58,7 +59,14 @@ func _process(delta: float) -> void:
 					
 					if should_drop:
 						sim.spawn_pixel(pixel, sim.water)
+						sim.update_neighbors8(pixel)
 						watering_can_water_stored -= 1
+				var can_px_pos := sim.global_to_pixel(watering_can.global_position)
+				if sim.pixel_in(can_px_pos, [sim.water]) and watering_can_water_stored < watering_can_max_water:
+					sim.set_pixel(can_px_pos, sim.empty)
+					watering_can_water_stored += 1
+					sim.update_neighbors8(can_px_pos)
+				
 		
 		if cursor.overlaps_area(holding_drop_spot):
 			holding_drop_spot.scale = Vector2(1.5, 1.5)
@@ -115,12 +123,17 @@ func _process(delta: float) -> void:
 			$WateringCan/Fill.modulate.a = 1
 			
 		var can_px_pos := sim.global_to_pixel(watering_can.global_position)
-		if can_in_fill_spot and sim.get_pixel(can_px_pos) == sim.water and watering_can_water_stored < watering_can_max_water:
+		if can_in_fill_spot and sim.pixel_in(can_px_pos, [sim.water]) and watering_can_water_stored < watering_can_max_water:
 			sim.set_pixel(can_px_pos, sim.empty)
 			watering_can_water_stored += 1
+			sim.update_neighbors8(can_px_pos)
+	
+	$WateringCan/Outline.frame = remap(watering_can_water_stored, 0, watering_can_max_water, 1, 9)
 	
 	if spigot_on:
 		var pixel := sim.global_to_pixel($Spigot/Spawn.global_position)
 		sim.spawn_pixel(pixel, sim.water)
 		
 	cursor.global_position = get_global_mouse_position()
+	
+	$Label.text = "Plants Alive: " + str(sim.plants_alive) + "\nPlants Killed: " + str(sim.plants_created - sim.plants_alive)
