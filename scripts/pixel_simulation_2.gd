@@ -142,22 +142,22 @@ func _step_simulation() -> void:
 					_update_sprout(current)
 				dying_plant:
 					_update_dying_plant(current)
-				leaf:
-					set_pixel_update(current, true)
-					var has_friend := false
-					for nei in get_neighbors8(current):
-						if pixel_in(nei, [sprout, leaf, plant]):
-							has_friend = true
-					if !has_friend:
-						image.set_pixelv(current, dying_plant)
-				plant:
-					set_pixel_update(current, true)
-					var has_friend := false
-					for nei in get_neighbors8(current):
-						if pixel_in(nei, [sprout, leaf, plant]):
-							has_friend = true
-					if !has_friend:
-						image.set_pixelv(current, dying_plant)
+				#leaf:
+					#set_pixel_update(current, true)
+					#var has_friend := false
+					#for nei in get_neighbors8(current):
+						#if pixel_in(nei, [sprout, leaf, plant]):
+							#has_friend = true
+					#if !has_friend:
+						#image.set_pixelv(current, dying_plant)
+				#plant:
+					#set_pixel_update(current, true)
+					#var has_friend := false
+					#for nei in get_neighbors8(current):
+						#if pixel_in(nei, [sprout, leaf, plant]):
+							#has_friend = true
+					#if !has_friend:
+						#image.set_pixelv(current, dying_plant)
 						
 						
 	_commit_pixel_updates_to_texture()
